@@ -1,0 +1,50 @@
+{
+  "name": "RampWatch Wx — Ramp operations weather alerts",
+  "short_name": "RampWatch Wx",
+  "description": "Heat stress, lightning, and wind alerts for ramp personnel. Live weather from Open-Meteo. Manual strike logging. Crew heat rotation. Notifications to leads' phones.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0e1419",
+  "background_color": "#0e1419",
+  "categories": ["productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230e1419' width='540' height='720'/><rect fill='%23161e25' x='16' y='40' width='508' height='100' rx='10'/><text x='32' y='90' font-family='system-ui' font-size='36' font-weight='bold' fill='%23e8edf2'>Ramp open</text><rect fill='%231f8a4c' x='200' y='160' width='100' height='60' rx='8'/><text x='220' y='195' font-family='system-ui' font-size='16' fill='%23fff'>Lightning</text></svg>",
+      "sizes": "540x720",
+      "form_factor": "narrow",
+      "type": "image/svg+xml"
+    }
+  ],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log strike",
+      "short_name": "Strike",
+      "description": "Log a lightning strike at your station",
+      "url": "./index.html?action=strike",
+      "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Add crew",
+      "short_name": "Crew",
+      "description": "Add a crew or agent to heat rotation",
+      "url": "./index.html?action=crew",
+      "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}]
+    }
+  ]
+}

@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RampWatch Wx</title>
+<meta name="theme-color" content="#0e1419">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one-column station console — status first, live feed, conditions, crew rotation, log. Built for gloved thumbs. */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --line:#d3d9e0; --fg:#121a22; --muted:#56636f;
+  --accent:#e8890c; --accent-ink:#1a1206;
+  --ok:#1f8a4c; --ok-bg:#e3f4ea; --warn:#b77400; --warn-bg:#fdf1d8; --bad:#c62828; --bad-bg:#fde4e4; --ext:#7b1fa2; --ext-bg:#f3e2f8;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1419; --panel:#161e25; --line:#2a3540; --fg:#e8edf2; --muted:#93a1ad;
+  --accent:#ffa31a; --ok:#4cc483; --ok-bg:#12301f; --warn:#f2b33d; --warn-bg:#352812; --bad:#ff6b6b; --bad-bg:#3a1517; --ext:#d58cf0; --ext-bg:#2f1838; color-scheme:dark}}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:760px;margin:0 auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:.02em;margin:0;line-height:1;text-transform:uppercase}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.clock{font-family:var(--mono);font-size:1.1rem;font-variant-numeric:tabular-nums;text-align:right}
+.clock small{display:block;color:var(--muted);font-size:.7rem;font-family:var(--body);text-transform:uppercase;letter-spacing:.08em}
+h2{font-family:var(--display);font-weight:700;font-size:1.25rem;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.status{border-radius:12px;padding:16px;display:grid;gap:8px;border:2px solid currentColor}
+.status .big{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,9vw,3.2rem);line-height:.95;text-transform:uppercase}
+.status .why{color:var(--fg);font-weight:500}
+.s-ok{color:var(--ok);background:var(--ok-bg)} .s-warn{color:var(--warn);background:var(--warn-bg)} .s-bad{color:var(--bad);background:var(--bad-bg)}
+.allclear{font-family:var(--mono);font-size:1.6rem;font-variant-numeric:tabular-nums;color:var(--fg)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:4px;min-width:0}
+.tile .v{font-family:var(--mono);font-weight:700;font-size:1.3rem;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;justify-self:start;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:99px}
+.c-ok{color:var(--ok);background:var(--ok-bg)} .c-warn{color:var(--warn);background:var(--warn-bg)} .c-bad{color:var(--bad);background:var(--bad-bg)} .c-ext{color:var(--ext);background:var(--ext-bg)} .c-mute{color:var(--muted);background:var(--bg)}
+@media (max-width:620px){.tiles{grid-template-columns:1fr 1fr}}
+@media (max-width:420px){.tiles{grid-template-columns:1fr}.tile{grid-template-columns:auto 1fr auto;align-items:center;gap:10px}.tile .v{text-align:right}}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.grid3{grid-template-columns:1fr 1fr}}
+.field{display:grid;gap:4px;min-width:0}
+input,select{font:inherit;font-family:var(--mono);font-size:1.05rem;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:100%;min-height:46px}
+input:disabled{opacity:.7}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:10px 14px;min-height:46px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{background:var(--bad);color:#fff;border-color:var(--bad)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row .field{flex:1 1 140px}
+.hint{color:var(--muted);font-size:.82rem;margin:8px 0 0}
+.divider{border:0;border-top:1px solid var(--line);margin:14px 0}
+.feed{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.metar{font-family:var(--mono);font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;white-space:pre;margin-top:10px}
+.toggle{display:flex;align-items:center;gap:8px;font-weight:500}
+.toggle input{width:22px;height:22px;min-height:0}
+.crew{display:grid;gap:8px}
+.crow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:8px;border-left-width:6px}
+.crow.work{border-left-color:var(--accent)} .crow.rest{border-left-color:var(--ok)} .crow.idle{border-left-color:var(--line)}
+.crow .n{font-weight:600;overflow-wrap:anywhere}
+.crow .m{color:var(--muted);font-size:.8rem}
+.crow .t{font-family:var(--mono);font-size:1.2rem;font-variant-numeric:tabular-nums;font-weight:700}
+.crow button{min-height:40px;padding:6px 10px;font-size:.85rem}
+.x{background:none;border:none;color:var(--muted);min-height:40px;padding:0 6px}
+.log{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+.log li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.log time{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:1.1rem}
+.foot{color:var(--muted);font-size:.78rem}
+@media (prefers-reduced-motion:no-preference){.status.s-bad .big{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.55}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>RampWatch <span>Wx</span></h1>
+      <p class="sub" id="stationLbl">—</p>
+    </div>
+    <div class="clock"><small>Local</small><span id="clock">--:--:--</span></div>
+  </header>
+
+  <section id="status" class="status s-ok" aria-live="polite">
+    <div class="label" style="color:inherit">Ramp status</div>
+    <div class="big" id="stBig">Ramp open</div>
+    <div class="why" id="stWhy">Loading live weather…</div>
+    <div id="acWrap" hidden><span class="label">All-clear in</span> <span class="allclear" id="acTime">15:00</span></div>
+  </section>
+
+  <div class="tiles">
+    <div class="tile"><span class="label">Lightning</span><span class="v" id="tLtg">—</span><span class="chip c-ok" id="cLtg">Clear</span></div>
+    <div class="tile"><span class="label">Wind gust</span><span class="v" id="tWind">— kt</span><span class="chip c-ok" id="cWind">Normal</span></div>
+    <div class="tile"><span class="label">Heat index</span><span class="v" id="tHi">— °F</span><span class="chip c-ok" id="cHi">Normal</span></div>
+    <div class="tile"><span class="label">Next 2 h</span><span class="v" id="tOut">—</span><span class="chip c-mute" id="cOut">Loading</span></div>
+  </div>
+
+  <section class="panel">
+    <div class="feed">
+      <h2 style="margin:0">Live feed</h2>
+      <span class="chip c-mute" id="feedChip">Connecting</span>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label class="label" for="airport">Airport</label><select id="airport"></select></div>
+      <button id="locBtn">Use my location</button>
+      <button id="refreshBtn" class="primary">Refresh</button>
+    </div>
+    <p class="hint" id="feedMeta">Weather: Open-Meteo. Observations: aviationweather.gov METAR. Refreshes every 5 min.</p>
+    <div class="metar" id="metar">METAR loading…</div>
+  </section>
+
+  <section class="panel">
+    <h2>Conditions</h2>
+    <label class="toggle"><input type="checkbox" id="manual"> Manual entry (override live feed)</label>
+    <div class="grid3" style="margin-top:10px">
+      <div class="field"><label class="label" for="temp">Temp °F</label><input id="temp" type="number" inputmode="decimal" value="85" disabled></div>
+      <div class="field"><label class="label" for="rh">Humidity %</label><input id="rh" type="number" inputmode="decimal" value="50" disabled></div>
+      <div class="field"><label class="label" for="gust">Gust kt</label><input id="gust" type="number" inputmode="decimal" value="10" disabled></div>
+    </div>
+    <hr class="divider">
+    <div class="row">
+      <div class="field"><label class="label" for="strikeDist">Strike distance (mi)</label><input id="strikeDist" type="number" inputmode="decimal" value="4"></div>
+      <button class="danger" id="logStrike">Log strike</button>
+      <button id="clearLtg">Clear lightning</button>
+    </div>
+    <p class="hint">Log strikes reported by your lightning detection system or ramp tower. Each strike inside the closure radius restarts the all-clear countdown. A thunderstorm in the live feed raises an alert but never closes the ramp on its own.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Crew heat rotation</h2>
+    <p class="hint" style="margin:0 0 10px" id="rotRule">Work/rest cycle follows the current heat index.</p>
+    <div class="crew" id="crew"></div>
+    <div class="row" style="margin-top:10px">
+      <div class="field"><label class="label" for="crewName">Add crew or agent</label><input id="crewName" type="text" placeholder="e.g. Gate C7 bag team" style="font-family:var(--body)"></div>
+      <button class="primary" id="addCrew">Add</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Alerts on this device</h2>
+    <div class="row">
+      <button id="notifBtn">Enable notifications</button>
+      <button id="wakeBtn">Keep screen on</button>
+      <button id="soundBtn">Chime: on</button>
+    </div>
+    <p class="hint" id="alertHint">Notifications fire on status changes while the app is open. Keep a lead's phone or the ops tablet on this screen.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Event log</h2>
+    <ul class="log" id="log"></ul>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>Station limits (set per your SOP)</summary>
+      <div class="grid3" style="margin-top:12px">
+        <div class="field"><label class="label" for="alertR">Lightning alert (mi)</label><input id="alertR" type="number" value="10"></div>
+        <div class="field"><label class="label" for="stopR">Ramp closure (mi)</label><input id="stopR" type="number" value="5"></div>
+        <div class="field"><label class="label" for="holdM">All-clear hold (min)</label><input id="holdM" type="number" value="15"></div>
+        <div class="field"><label class="label" for="windC">Wind caution (kt)</label><input id="windC" type="number" value="25"></div>
+        <div class="field"><label class="label" for="windS">Wind stop (kt)</label><input id="windS" type="number" value="40"></div>
+        <div class="field"><label class="label" for="capeT">Storm risk CAPE (J/kg)</label><input id="capeT" type="number" value="1500"></div>
+      </div>
+      <p class="hint">Defaults are placeholders. Replace them with your airline's ground ops manual and station safety limits.</p>
+      <div class="row" style="margin-top:8px"><button id="resetBtn">Reset app</button></div>
+    </details>
+  </section>
+
+  <p class="foot">Pilot tool. Not an approved safety system; the ramp tower and your certified lightning detection system remain the authority. Weather data by Open-Meteo.com (CC BY 4.0) and NOAA Aviation Weather Center.</p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem('rwl_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('rwl_'+k,JSON.stringify(v))}catch(e){}}};
+
+const AIRPORTS=[
+ ['KDFW','Dallas/Fort Worth',32.8998,-97.0403],['KDAL','Dallas Love',32.8471,-96.8518],['KIAH','Houston Bush',29.9902,-95.3368],['KHOU','Houston Hobby',29.6454,-95.2789],
+ ['KATL','Atlanta',33.6407,-84.4277],['KORD','Chicago O\'Hare',41.9742,-87.9073],['KMDW','Chicago Midway',41.7868,-87.7522],['KDEN','Denver',39.8561,-104.6737],
+ ['KLAX','Los Angeles',33.9416,-118.4085],['KJFK','New York JFK',40.6413,-73.7781],['KEWR','Newark',40.6895,-74.1745],['KMIA','Miami',25.7959,-80.2870],
+ ['KMCO','Orlando',28.4312,-81.3081],['KCLT','Charlotte',35.2140,-80.9431],['KPHX','Phoenix',33.4342,-112.0116],['KLAS','Las Vegas',36.0840,-115.1537],
+ ['KSEA','Seattle',47.4502,-122.3088],['KMSY','New Orleans',29.9934,-90.2580],['KAUS','Austin',30.1975,-97.6664],['KSAT','San Antonio',29.5337,-98.4698]
+];
+const sel=$('airport');
+AIRPORTS.forEach(a=>{const o=document.createElement('option');o.value=a[0];o.textContent=a[0]+' · '+a[1];sel.append(o)});
+const oc=document.createElement('option');oc.value='GPS';oc.textContent='My location (GPS)';sel.append(oc);
+
+const HEAT=[
+  {max:80, name:'Normal', cls:'c-ok', work:0, rest:0, water:'Normal hydration'},
+  {max:91, name:'Caution', cls:'c-warn', work:50, rest:10, water:'1 cup water every 20 min'},
+  {max:103,name:'Extreme caution', cls:'c-warn', work:45, rest:15, water:'1 cup water every 15–20 min'},
+  {max:125,name:'Danger', cls:'c-bad', work:30, rest:30, water:'1 cup water every 15 min, shade on rest'},
+  {max:999,name:'Extreme danger', cls:'c-ext', work:15, rest:45, water:'Essential tasks only, cooled rest area'}
+];
+
+let S=store.get('state',null)||{strikes:[],crew:[],log:[],sound:true,airport:'KDFW',gps:null,manual:false};
+let W=store.get('wx',null); // last live reading
+const cfgIds=['alertR','stopR','holdM','windC','windS','capeT','temp','rh','gust'];
+const savedCfg=store.get('cfg',null); if(savedCfg) cfgIds.forEach(i=>{if(savedCfg[i]!=null)$(i).value=savedCfg[i]});
+function save(){store.set('state',S);const o={};cfgIds.forEach(i=>o[i]=$(i).value);store.set('cfg',o)}
+const num=id=>parseFloat($(id).value)||0;
+sel.value=S.airport; $('manual').checked=S.manual;
+
+function heatIndex(T,RH){
+  let hi=0.5*(T+61+((T-68)*1.2)+RH*0.094);
+  if((hi+T)/2>=80){
+    hi=-42.379+2.04901523*T+10.14333127*RH-.22475541*T*RH-.00683783*T*T-.05481717*RH*RH+.00122874*T*T*RH+.00085282*T*RH*RH-.00000199*T*T*RH*RH;
+    if(RH<13&&T>=80&&T<=112) hi-=((13-RH)/4)*Math.sqrt((17-Math.abs(T-95))/17);
+    if(RH>85&&T>=80&&T<=87) hi+=((RH-85)/10)*((87-T)/5);
+  }
+  return Math.round(hi);
+}
+const band=hi=>HEAT.find(b=>hi<b.max);
+const fmt=ms=>{ms=Math.max(0,ms);const s=Math.ceil(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const hhmm=t=>new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:false});
+const TS_CODES={95:'Thunderstorm',96:'Thunderstorm with hail',99:'Thunderstorm with heavy hail'};
+
+/* ---------- live feed ---------- */
+function station(){
+  if(S.airport==='GPS'&&S.gps) return {id:'GPS',name:'My location',lat:S.gps.lat,lon:S.gps.lon};
+  const a=AIRPORTS.find(x=>x[0]===S.airport)||AIRPORTS[0];
+  return {id:a[0],name:a[1],lat:a[2],lon:a[3]};
+}
+async function fetchWx(){
+  const st=station();
+  $('feedChip').textContent='Updating';$('feedChip').className='chip c-mute';
+  const url='https://api.open-meteo.com/v1/forecast?latitude='+st.lat+'&longitude='+st.lon+
+    '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,weather_code'+
+    '&hourly=weather_code,cape,wind_gusts_10m&forecast_hours=3&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=auto';
+  try{
+    const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();const c=j.current,h=j.hourly||{};
+    const codes=(h.weather_code||[]).slice(0,3), capes=(h.cape||[]).slice(0,3), gusts=(h.wind_gusts_10m||[]).slice(0,3);
+    W={t:Date.now(),obsTime:c.time,temp:Math.round(c.temperature_2m),rh:Math.round(c.relative_humidity_2m),
+       wind:Math.round(c.wind_speed_10m),gust:Math.round(Math.max(c.wind_gusts_10m||0,c.wind_speed_10m||0)),code:c.weather_code,
+       tsNext:codes.some(x=>x>=95),capeMax:Math.round(Math.max(0,...capes.filter(v=>v!=null))),gustNext:Math.round(Math.max(0,...gusts.filter(v=>v!=null))),station:st.id};
+    store.set('wx',W);
+    $('feedChip').textContent='Live';$('feedChip').className='chip c-ok';
+  }catch(e){
+    $('feedChip').textContent='Offline';$('feedChip').className='chip c-bad';
+    addLog('Weather feed failed ('+e.message+'). Showing last reading.');
+  }
+  fetchMetar(st);
+  applyWx();render();
+}
+async function fetchMetar(st){
+  const box=$('metar');
+  if(st.id==='GPS'){box.textContent='METAR available when an airport is selected.';W&&(W.metarTS=false);return}
+  try{
+    const r=await fetch('https://aviationweather.gov/api/data/metar?ids='+st.id+'&format=json');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();const m=j&&j[0];
+    if(!m){box.textContent='No METAR returned for '+st.id+'.';return}
+    box.textContent=m.rawOb;
+    const raw=' '+m.rawOb+' ';
+    const ts=/\s[-+]?(VC)?TS[A-Z]*\s/.test(raw)||/\sLTG/.test(raw);
+    if(W){W.metarTS=ts;W.metarRaw=m.rawOb;store.set('wx',W)}
+  }catch(e){box.textContent='METAR not reachable from this browser ('+e.message+'). Live model data still applies.'}
+}
+function applyWx(){
+  if(!W||S.manual)return;
+  $('temp').value=W.temp;$('rh').value=W.rh;$('gust').value=W.gust;
+}
+
+/* ---------- lightning ---------- */
+function lightning(){
+  const now=Date.now(),hold=num('holdM')*60000,stopR=num('stopR'),alertR=num('alertR');
+  const live=S.strikes.filter(s=>now-s.t<hold);
+  const inStop=live.filter(s=>s.d<=stopR), inAlert=live.filter(s=>s.d<=alertR);
+  const nearest=live.slice().sort((a,b)=>a.d-b.d)[0];
+  if(inStop.length) return{level:2,remain:Math.max(...inStop.map(s=>s.t))+hold-now,nearest,src:'strike'};
+  if(inAlert.length) return{level:1,remain:Math.max(...inAlert.map(s=>s.t))+hold-now,nearest,src:'strike'};
+  if(W&&!S.manual&&(TS_CODES[W.code]||W.metarTS)) return{level:1,nearest:null,src:'feed'};
+  return{level:0,nearest:null};
+}
+
+/* ---------- log, sound, notifications ---------- */
+function addLog(msg){S.log.unshift({t:Date.now(),msg});S.log=S.log.slice(0,80);renderLog();save()}
+function renderLog(){
+  const ul=$('log');ul.innerHTML='';
+  if(!S.log.length){ul.innerHTML='<li><time>—</time><span>No events yet.</span></li>';return}
+  S.log.forEach(e=>{const li=document.createElement('li');const tm=document.createElement('time');tm.textContent=hhmm(e.t);const sp=document.createElement('span');sp.textContent=e.msg;li.append(tm,sp);ul.append(li)});
+}
+let actx=null;
+function chime(n=2){
+  if(!S.sound)return;
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    for(let i=0;i<n;i++){const o=actx.createOscillator(),g=actx.createGain(),t0=actx.currentTime+i*.25;o.frequency.value=i%2?660:880;g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.3,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+.22);o.connect(g).connect(actx.destination);o.start(t0);o.stop(t0+.25)}
+  }catch(e){}
+}
+async function notify(title,body){
+  try{
+    if(!('Notification' in window)||Notification.permission!=='granted')return;
+    const reg=await navigator.serviceWorker?.getRegistration();
+    const opts={body,icon:'icon.svg',tag:'rampwatch',renotify:true,vibrate:[300,100,300]};
+    if(reg)reg.showNotification(title,opts);else new Notification(title,opts);
+  }catch(e){}
+}
+
+/* ---------- render ---------- */
+let lastStatus=null,lastLtg=null;
+function render(){
+  const now=Date.now();
+  $('clock').textContent=new Date().toLocaleTimeString([], {hour12:false});
+  const st=station();
+  $('stationLbl').textContent='Station '+(st.id==='GPS'?'GPS '+st.lat.toFixed(3)+', '+st.lon.toFixed(3):st.id+' · '+st.name);
+  const L=lightning(), gust=num('gust'), hi=heatIndex(num('temp'),num('rh')), hb=band(hi);
+  const wl=gust>=num('windS')?2:gust>=num('windC')?1:0;
+
+  $('tLtg').textContent=L.nearest?L.nearest.d+' mi':(L.src==='feed'?'At field':'—');
+  setChip('cLtg',['Clear','Alert','Stop work'][L.level],['c-ok','c-warn','c-bad'][L.level]);
+  $('tWind').textContent=gust+' kt';
+  setChip('cWind',['Normal','Caution','Stop'][wl],['c-ok','c-warn','c-bad'][wl]);
+  $('tHi').textContent=hi+' °F';
+  setChip('cHi',hb.name,hb.cls);
+
+  // outlook
+  if(W&&!S.manual){
+    const risk=W.tsNext||W.capeMax>=num('capeT'), windRisk=W.gustNext>=num('windC');
+    $('tOut').textContent=W.tsNext?'T-storm':risk?'CAPE '+W.capeMax:windRisk?W.gustNext+' kt':'Quiet';
+    setChip('cOut',risk?'Storm risk':windRisk?'Wind risk':'Low risk',risk||windRisk?'c-warn':'c-ok');
+    const age=Math.round((now-W.t)/60000);
+    $('feedMeta').textContent='Updated '+hhmm(W.t)+(age?' ('+age+' min ago)':'')+'. Model obs '+(W.obsTime||'').replace('T',' ')+'. Wind '+W.wind+' kt, gust '+W.gust+' kt. Refreshes every 5 min.';
+    if(age>15){$('feedChip').textContent='Stale';$('feedChip').className='chip c-warn'}
+  }else{
+    $('tOut').textContent='—';setChip('cOut',S.manual?'Manual mode':'No data','c-mute');
+  }
+
+  const hl=hb.cls==='c-ok'?0:1;
+  const level=Math.max(L.level,wl,hl);
+  $('status').className='status '+['s-ok','s-warn','s-bad'][level];
+  let big='Ramp open',why=[];
+  if(L.level===2){big='Ramp closed';why.push('Lightning within '+num('stopR')+' mi. All personnel off the ramp; headsets off.')}
+  else if(L.level===1&&L.src==='strike'){why.push('Lightning within '+num('alertR')+' mi. Prepare to clear the ramp.')}
+  else if(L.level===1){why.push((TS_CODES[W.code]||'Thunderstorm in METAR')+' reported at the field. Confirm with ramp tower and lightning detection.')}
+  if(wl===2){big='Ramp closed';why.push('Gusts '+gust+' kt: stop belt loaders, secure cargo doors and GSE.')}
+  else if(wl===1){why.push('Gusts '+gust+' kt: secure loose items, chock and brake GSE, watch doors.')}
+  if(hl){why.push('Heat index '+hi+'°F ('+hb.name.toLowerCase()+'): '+hb.water+'.')}
+  if(level===1&&big==='Ramp open')big='Caution';
+  $('stBig').textContent=big;
+  $('stWhy').textContent=why.length?why.join(' '):'No active weather restrictions.';
+  $('acWrap').hidden=!(L.level>0&&L.src==='strike');
+  if(L.remain!=null)$('acTime').textContent=fmt(L.remain);
+
+  if(lastLtg!==null&&lastLtg>0&&L.level===0){addLog('Lightning all-clear. Ramp may resume ops.');chime(3)}
+  lastLtg=L.level;
+  if(lastStatus!==null&&big!==lastStatus){notify('RampWatch: '+big,$('stWhy').textContent);if(big!=='Ramp closed')addLog('Status changed to '+big.toLowerCase()+'.')}
+  lastStatus=big;
+
+  $('rotRule').textContent=hb.work?('Heat index '+hi+'°F → '+hb.work+' min work / '+hb.rest+' min rest. '+hb.water+'.'):('Heat index '+hi+'°F → no rotation required. Crews can still be tracked.');
+  renderCrew(hb,now,L.level===2||wl===2);
+}
+function setChip(id,txt,cls){const c=$(id);c.textContent=txt;c.className='chip '+cls}
+
+function renderCrew(hb,now,closed){
+  const box=$('crew');box.innerHTML='';
+  S.crew.forEach(c=>{
+    if(c.mode!=='idle'&&c.until&&now>=c.until){
+      if(c.mode==='work'){c.mode='rest';c.until=now+hb.rest*60000;addLog(c.name+': rotate to rest ('+hb.rest+' min).');chime(2);notify('Rotate to rest',c.name+' — '+hb.rest+' min rest, '+hb.water.toLowerCase()+'.')}
+      else{c.mode='work';c.until=hb.work?now+hb.work*60000:0;addLog(c.name+': rest over, back to work.');chime(1)}
+      save();
+    }
+    const row=document.createElement('div');row.className='crow '+c.mode;
+    const info=document.createElement('div');
+    const n=document.createElement('div');n.className='n';n.textContent=c.name;
+    const m=document.createElement('div');m.className='m';
+    m.textContent=c.mode==='idle'?(closed?'Holding: ramp closed':'Off the ramp'):c.mode==='work'?'Working · rest due':'Resting · back out in';
+    info.append(n,m);
+    const t=document.createElement('div');t.className='t';t.textContent=c.mode==='idle'?'—':(c.until?fmt(c.until-now):'∞');
+    const b=document.createElement('button');b.textContent=c.mode==='idle'?'Start':'Stop';
+    if(c.mode==='idle'&&closed)b.disabled=true;
+    b.onclick=()=>{
+      if(c.mode==='idle'){c.mode='work';c.until=hb.work?Date.now()+hb.work*60000:0;addLog(c.name+' on the ramp'+(hb.work?' ('+hb.work+' min work cycle).':'.'))}
+      else{c.mode='idle';c.until=0;addLog(c.name+' off the ramp.')}
+      save();render();
+    };
+    const x=document.createElement('button');x.className='x';x.setAttribute('aria-label','Remove '+c.name);x.textContent='✕';
+    x.onclick=()=>{S.crew=S.crew.filter(k=>k.id!==c.id);save();render()};
+    const right=document.createElement('div');right.style.display='flex';right.style.gap='4px';right.append(b,x);
+    row.append(info,t,right);box.append(row);
+  });
+  if(!S.crew.length)box.innerHTML='<p class="hint" style="margin:0">No crews yet. Add each gate team or agent below, then tap Start when they go out.</p>';
+}
+
+/* ---------- events ---------- */
+$('logStrike').onclick=()=>{
+  const d=num('strikeDist');S.strikes.push({t:Date.now(),d});
+  addLog('Strike logged at '+d+' mi.'+(d<=num('stopR')?' RAMP CLOSED, all-clear clock reset.':d<=num('alertR')?' Lightning alert.':''));
+  if(d<=num('stopR')){S.crew.forEach(c=>{c.mode='idle';c.until=0});addLog('All crews recalled off the ramp.');chime(4)}else chime(1);
+  save();render();
+};
+$('clearLtg').onclick=()=>{S.strikes=[];addLog('Logged strikes cleared manually.');save();render()};
+$('addCrew').onclick=()=>{const v=$('crewName').value.trim();if(!v)return;S.crew.push({id:Date.now(),name:v,mode:'idle',until:0});$('crewName').value='';addLog(v+' added.');save();render()};
+$('crewName').addEventListener('keydown',e=>{if(e.key==='Enter')$('addCrew').click()});
+$('soundBtn').onclick=()=>{S.sound=!S.sound;$('soundBtn').textContent='Chime: '+(S.sound?'on':'off');save();if(S.sound)chime(1)};
+$('soundBtn').textContent='Chime: '+(S.sound?'on':'off');
+$('resetBtn').onclick=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rwl_')).forEach(k=>localStorage.removeItem(k))}catch(e){};location.reload()};
+cfgIds.forEach(i=>$(i).addEventListener('input',()=>{save();render()}));
+$('manual').onchange=()=>{S.manual=$('manual').checked;['temp','rh','gust'].forEach(i=>$(i).disabled=!S.manual);addLog(S.manual?'Manual entry on: live feed paused.':'Live feed resumed.');if(!S.manual)applyWx();save();render()};
+['temp','rh','gust'].forEach(i=>$(i).disabled=!S.manual);
+sel.onchange=()=>{
+  if(sel.value==='GPS'&&!S.gps){$('locBtn').click();return}
+  S.airport=sel.value;save();addLog('Station set to '+sel.value+'.');fetchWx();
+};
+$('locBtn').onclick=()=>{
+  if(!navigator.geolocation){$('alertHint').textContent='This browser has no location support. Pick an airport instead.';return}
+  navigator.geolocation.getCurrentPosition(p=>{
+    S.gps={lat:p.coords.latitude,lon:p.coords.longitude};S.airport='GPS';sel.value='GPS';save();addLog('Station set to GPS position.');fetchWx();
+  },err=>{sel.value=S.airport;$('feedMeta').textContent='Location unavailable ('+err.message+'). Pick an airport from the list.'},{enableHighAccuracy:false,timeout:10000});
+};
+$('refreshBtn').onclick=fetchWx;
+$('notifBtn').onclick=async()=>{
+  if(!('Notification' in window)){$('alertHint').textContent='Notifications are not supported here. On iPhone, add the app to the Home Screen first.';return}
+  const p=await Notification.requestPermission();
+  $('notifBtn').textContent=p==='granted'?'Notifications on':'Notifications blocked';
+  if(p==='granted')notify('RampWatch alerts on','You will get status changes and crew rotations on this device.');
+  chime(1);
+};
+if('Notification' in window&&Notification.permission==='granted')$('notifBtn').textContent='Notifications on';
+let wake=null;
+$('wakeBtn').onclick=async()=>{
+  try{
+    if(wake){await wake.release();wake=null;$('wakeBtn').textContent='Keep screen on';return}
+    wake=await navigator.wakeLock.request('screen');$('wakeBtn').textContent='Screen stays on';
+    wake.addEventListener('release',()=>{wake=null;$('wakeBtn').textContent='Keep screen on'});
+  }catch(e){$('alertHint').textContent='Screen wake lock is not available in this browser.'}
+};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(wake===null&&$('wakeBtn').textContent==='Screen stays on')$('wakeBtn').click();if(!W||Date.now()-W.t>5*60000)fetchWx()}});
+
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+if(!S.log.length)S.log=[{t:Date.now(),msg:'Shift opened.'}];
+renderLog();applyWx();render();fetchWx();
+setInterval(render,1000);
+setInterval(fetchWx,5*60000);
+</script>
+</body>
+</html>

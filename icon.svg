@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#0e1419" rx="40"/>
+
+  <!-- Lightning bolt (alert symbol) -->
+  <g transform="translate(96, 96)">
+    <!-- Outer glow -->
+    <circle cx="0" cy="-8" r="48" fill="none" stroke="#ffa31a" stroke-width="2" opacity="0.3"/>
+
+    <!-- Lightning bolt -->
+    <path d="M 0,-30 L -12,0 L 8,0 L -8,30 L 12,8 L -4,8 Z" fill="#ffa31a" stroke="#e8890c" stroke-width="1.5" stroke-linejoin="round"/>
+
+    <!-- Center highlight (wind/weather motion) -->
+    <circle cx="0" cy="0" r="6" fill="#ffffff" opacity="0.8"/>
+  </g>
+
+  <!-- Corner accent (heat indicator) -->
+  <g transform="translate(156, 156)">
+    <circle cx="0" cy="0" r="18" fill="#ff6b6b" opacity="0.2"/>
+    <circle cx="0" cy="0" r="12" fill="none" stroke="#ff6b6b" stroke-width="2"/>
+    <text x="0" y="4" font-family="system-ui" font-size="10" font-weight="bold" fill="#ff6b6b" text-anchor="middle">!</text>
+  </g>
+</svg>
