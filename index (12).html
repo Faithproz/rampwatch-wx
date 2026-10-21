@@ -188,11 +188,18 @@ const $=id=>document.getElementById(id);
 const store={get(k,d){try{const v=localStorage.getItem('rwl_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('rwl_'+k,JSON.stringify(v))}catch(e){}}};
 
 const AIRPORTS=[
+ ['KSTL','Saint Louis Lambert',38.7469,-90.3700],
  ['KDFW','Dallas/Fort Worth',32.8998,-97.0403],['KDAL','Dallas Love',32.8471,-96.8518],['KIAH','Houston Bush',29.9902,-95.3368],['KHOU','Houston Hobby',29.6454,-95.2789],
  ['KATL','Atlanta',33.6407,-84.4277],['KORD','Chicago O\'Hare',41.9742,-87.9073],['KMDW','Chicago Midway',41.7868,-87.7522],['KDEN','Denver',39.8561,-104.6737],
  ['KLAX','Los Angeles',33.9416,-118.4085],['KJFK','New York JFK',40.6413,-73.7781],['KEWR','Newark',40.6895,-74.1745],['KMIA','Miami',25.7959,-80.2870],
  ['KMCO','Orlando',28.4312,-81.3081],['KCLT','Charlotte',35.2140,-80.9431],['KPHX','Phoenix',33.4342,-112.0116],['KLAS','Las Vegas',36.0840,-115.1537],
- ['KSEA','Seattle',47.4502,-122.3088],['KMSY','New Orleans',29.9934,-90.2580],['KAUS','Austin',30.1975,-97.6664],['KSAT','San Antonio',29.5337,-98.4698]
+ ['KSEA','Seattle',47.4502,-122.3088],['KMSY','New Orleans',29.9934,-90.2580],['KAUS','Austin',30.1975,-97.6664],['KSAT','San Antonio',29.5337,-98.4698],
+ ['KBOS','Boston Logan',42.3656,-71.0096],['KIAD','Washington Dulles',38.8951,-77.0377],['KLGA','New York LaGuardia',40.7769,-73.8740],['KPHL','Philadelphia',39.8722,-75.2411],
+ ['KFLL','Fort Lauderdale',26.0726,-80.1527],['KTPA','Tampa Bay',27.9755,-82.5338],['KPIT','Pittsburgh',40.4915,-80.2324],['KCLE','Cleveland Hopkins',41.4117,-81.8498],
+ ['KDCA','Washington Reagan',38.8521,-77.0377],['KBWI','Baltimore/Washington',39.1754,-76.6682],['KMSP','Minneapolis',44.8820,-93.2169],['KMKE','Milwaukee',42.9460,-87.8963],
+ ['KMCI','Kansas City',39.2976,-94.7139],['KPDX','Portland',45.5887,-122.5975],['KSFO','San Francisco',37.6213,-122.3790],['KSJC','San Jose',37.3639,-121.9289],
+ ['KSAN','San Diego',32.7338,-117.1933],['KSLC','Salt Lake City',40.7884,-111.8787],['KABQ','Albuquerque',35.0401,-106.6365],
+ ['KPBI','West Palm Beach',26.6832,-80.0956]
 ];
 const sel=$('airport');
 AIRPORTS.forEach(a=>{const o=document.createElement('option');o.value=a[0];o.textContent=a[0]+' · '+a[1];sel.append(o)});
